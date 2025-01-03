@@ -3,47 +3,49 @@ import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 
-# Bot API Key එක
+# Bot API Key
 API_KEY = '7124918669:AAE-QrV_ClXNzA_Lc1Y5u-7B7LmykhBMUwA'
 
 # yt-dlp options
 async def download_song(update: Update, context: CallbackContext):
-    # YouTube URL එකක් ලබා ගන්න
+    # YouTube URL
     url = " ".join(context.args)
     
     if not url:
         await update.message.reply_text("You must provide a YouTube URL.")
         return
     
-    # cookie.txt ගොනුව සහ 320kbps MP3 options
+    # cookie.txt file and 320kbps MP3 options
     cookie_file = 'cookie.txt'
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
-            'key': 'FFmpegExtractAudio',  # FFmpegExtractAudio භාවිතා කිරීම
+            'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '320',  # 320kbps MP3
+            'preferredquality': '320',
         }],
-        'cookiefile': cookie_file,  # cookie.txt ගොනුව භාවිතා කිරීම
-        'outtmpl': 'downloads/%(title)s.%(ext)s',  # Downloads ෆෝල්ඩර් එකේ සින්දු
+        'cookiefile': cookie_file,  # Use the cookie file
+        'outtmpl': '/storage/emulated/0/Download/%(title)s.%(ext)s',  # Save to the Downloads folder
     }
 
-    # yt-dlp එක මඟින් සින්දු බාගත කිරීම
+    # yt-dlp to download the song
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info_dict = ydl.extract_info(url, download=True)
             video_title = info_dict.get('title', None)
-            audio_file = f'downloads/{video_title}.mp3'
+            audio_file = f'/storage/emulated/0/Download/{video_title}.mp3'
             
-            # Telegram එකට සින්දු ගොනුව එවීම
+            # Send audio file via Telegram
             if os.path.exists(audio_file):
                 await update.message.reply_text(f"Downloading and sending: {video_title}")
                 await update.message.reply_audio(audio=open(audio_file, 'rb'))
-                os.remove(audio_file)  # After sending, remove the file
+                os.remove(audio_file)  # Delete the file after sending
             else:
                 await update.message.reply_text("Error in downloading the song.")
+        except yt_dlp.DownloadError as e:
+            await update.message.reply_text(f"Download Error: {str(e)}")
         except Exception as e:
-            await update.message.reply_text(f"Error: {str(e)}")
+            await update.message.reply_text(f"An error occurred: {str(e)}")
 
 # Start command
 async def start(update: Update, context: CallbackContext):
